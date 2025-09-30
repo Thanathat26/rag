@@ -96,25 +96,9 @@ def handle_message(event):
     user_id = event.source.user_id
     user_text = event.message.text.strip()
 
-    # ตรวจสอบ session ว่ามีอยู่หรือไม่
-    if user_id not in user_sessions:
-        # สร้าง session ใหม่: สุ่ม 6–12 คำถาม
-        num_questions = random.randint(6, 12)
-        user_sessions[user_id] = {
-            "questions": random.sample(questions_pool, num_questions),
-            "index": 0
-        }
-
-    session = user_sessions[user_id]
-
-    # หากยังมีคำถามที่เหลือ
-    if session["index"] < len(session["questions"]):
-        next_question = session["questions"][session["index"]]
-        session["index"] += 1
-        reply = f"❓ {next_question}"
-    else:
-        # ถามครบแล้ว → ทำ FAISS + Neo4j Search
-        similar_kw = find_similar_keyword(user_text)
+    # --- กรณี user พิมพ์ชื่อ keyword ตรง ๆ ---
+    if user_text in keywords:
+        similar_kw = user_text
         plants = search_plants(similar_kw)
 
         if plants:
@@ -124,8 +108,39 @@ def handle_message(event):
         else:
             reply = "ไม่พบข้อมูลที่ตรงกับคำค้นหา"
 
-        # ลบ session ของ user เพราะจบแล้ว
-        del user_sessions[user_id]
+        # ลบ session ถ้ามี
+        if user_id in user_sessions:
+            del user_sessions[user_id]
+
+    # --- กรณี interactive ---
+    else:
+        if user_id not in user_sessions:
+            num_questions = random.randint(6, 12)
+            user_sessions[user_id] = {
+                "questions": random.sample(questions_pool, num_questions),
+                "index": 0
+            }
+
+        session = user_sessions[user_id]
+
+        if session["index"] < len(session["questions"]):
+            next_question = session["questions"][session["index"]]
+            session["index"] += 1
+            reply = f"❓ {next_question}"
+        else:
+            # ถามครบแล้ว → FAISS + Neo4j
+            similar_kw = find_similar_keyword(user_text)
+            plants = search_plants(similar_kw)
+
+            if plants:
+                reply = f"🔍 คุณค้นหาใกล้เคียง: {similar_kw}\n\n"
+                for p in plants:
+                    reply += f"- {p['name']} ({p['category']}) ราคา {p['price']} บาท\n"
+            else:
+                reply = "ไม่พบข้อมูลที่ตรงกับคำค้นหา"
+
+            # ลบ session
+            del user_sessions[user_id]
 
     # ส่งข้อความกลับ LINE
     line_bot_api.reply_message(
