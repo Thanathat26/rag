@@ -19,7 +19,7 @@ driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "password"
 # === Embedding Model ===
 model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
 
-# === เตรียม Keywords จาก Neo4j ===
+# === โหลด Keywords จาก Neo4j ===
 def load_keywords():
     with driver.session() as session:
         query = """
@@ -38,7 +38,7 @@ embeddings = model.encode(keywords, convert_to_numpy=True)
 index = faiss.IndexFlatL2(embeddings.shape[1])
 index.add(embeddings)
 
-# === FAISS search ===
+# === FAISS Search ===
 def find_similar_keyword(user_text):
     vec = model.encode([user_text], convert_to_numpy=True)
     D, I = index.search(vec, 1)
@@ -56,19 +56,23 @@ def search_plants(keyword):
         result = session.run(query, kw=keyword)
         return [record.data() for record in result]
 
-# === Random Example Questions ===
+# === Random Customer Need Questions ===
 def random_questions():
     qlist = [
-        "มีต้นไม้ราคาต่ำกว่า 300 ไหม",
-        "ต้นไม้ที่นิยมทำรั้วคืออะไรบ้าง",
-        "แนะนำต้นไม้ตระกูลสนราคาไม่เกิน 500",
-        "ไม้ล้อมที่เหมาะกับบ้านสวนคืออะไร",
-        "อยากได้ต้นไม้ที่มีกลิ่นหอม",
-        "มีรูปตัวอย่างต้นไม้พร้อมราคาไหม",
-        "ต้นไม้สำหรับตกแต่งสไตล์อังกฤษมีอะไรบ้าง",
-        "ช่วยเลือกต้นไม้ที่โตเร็วและบังแดดได้ดี",
-        "มีต้นไม้สูงใหญ่ราคาไม่เกิน 2000 ไหม",
-        "แนะนำต้นไม้ที่ออกดอกสวย"
+        "คุณกำลังมองหาต้นไม้ประเภทไหนอยู่ครับ?",
+        "คุณอยากได้ต้นไม้สำหรับปลูกในบ้านหรือกลางแจ้งครับ?",
+        "คุณมีงบประมาณสำหรับต้นไม้ประมาณเท่าไหร่ครับ?",
+        "คุณสนใจต้นไม้ที่ดูแลง่ายหรือต้องการต้นไม้พิเศษครับ?",
+        "คุณอยากได้ต้นไม้ที่โตเร็วหรือโตช้าครับ?",
+        "คุณสนใจต้นไม้ที่ให้ร่มเงาหรือต้นไม้ตกแต่งครับ?",
+        "คุณอยากได้ต้นไม้ที่ออกดอกหรือไม้ใบครับ?",
+        "คุณต้องการต้นไม้ที่ใช้ทำรั้วหรือไม่ครับ?",
+        "คุณอยากได้ต้นไม้ที่ให้กลิ่นหอมใช่ไหมครับ?",
+        "คุณอยากให้แนะนำต้นไม้ยอดนิยมให้ไหมครับ?",
+        "คุณอยากได้ต้นไม้ที่มีขนาดใหญ่หรือต้นเล็กครับ?",
+        "คุณสนใจไม้ล้อมหรือไม้กระถางครับ?",
+        "คุณอยากได้ต้นไม้ที่ทนแดดหรือทนร่มครับ?",
+        "คุณอยากได้ต้นไม้สำหรับสไตล์สวนอังกฤษหรือสวนโมเดิร์นครับ?"
     ]
     return random.sample(qlist, k=random.randint(6, 12))
 
@@ -103,8 +107,8 @@ def handle_message(event):
     else:
         reply = "ไม่พบข้อมูลที่ตรงกับคำค้นหา"
 
-    # แนบคำถามสุ่มบางข้อ
-    reply += "\n\n❓ ตัวอย่างคำถามที่คุณลองได้:\n"
+    # แนบคำถามสุ่มเพื่อถามความต้องการลูกค้า
+    reply += "\n\n❓ คำถามเพื่อช่วยแนะนำต้นไม้:\n"
     for q in random_questions():
         reply += f"- {q}\n"
 
